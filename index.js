@@ -108,6 +108,12 @@ async function run() {
             res.send(options);
         })
 
+        app.get('/appointmentSpecialty', async(req, res) =>{
+            const query = {}
+            const result = await appointmentOptionCollection.find(query).project({name: 1}).toArray();
+            res.send(result);
+        })
+
         /***
          * API Naming Convention 
          * app.get('/bookings')
