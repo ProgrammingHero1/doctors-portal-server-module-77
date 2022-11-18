@@ -45,8 +45,14 @@ async function run() {
         const doctorsCollection = client.db('doctorsPortal').collection('doctors');
 
         // NOTE: make sure you use verifyAdmin after verifyJWT
-        const verifyAdmin = (req, res, next) =>{
-            console.log('inside verifyAdmin', req.decoded.email)
+        const verifyAdmin = async (req, res, next) =>{
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
             next();
         }
 
@@ -194,15 +200,7 @@ async function run() {
             res.send(result);
         });
 
-        app.put('/users/admin/:id', verifyJWT, async (req, res) => {
-            const decodedEmail = req.decoded.email;
-            const query = { email: decodedEmail };
-            const user = await usersCollection.findOne(query);
-
-            if (user?.role !== 'admin') {
-                return res.status(403).send({ message: 'forbidden access' })
-            }
-
+        app.put('/users/admin/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) }
             const options = { upsert: true };
@@ -221,13 +219,13 @@ async function run() {
             res.send(doctors);
         })
 
-        app.post('/doctors', verifyJWT, async (req, res) => {
+        app.post('/doctors', verifyJWT, verifyAdmin, async (req, res) => {
             const doctor = req.body;
             const result = await doctorsCollection.insertOne(doctor);
             res.send(result);
         });
 
-        app.delete('/doctors/:id', verifyJWT, async (req, res) => {
+        app.delete('/doctors/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const result = await doctorsCollection.deleteOne(filter);
